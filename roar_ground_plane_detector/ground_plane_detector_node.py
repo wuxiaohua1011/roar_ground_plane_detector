@@ -58,7 +58,18 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         self.declare_parameter("distance_threshold", 1.0)
         self.declare_parameter("ransac_n", 10)
         self.declare_parameter("num_iterations", 1000)
-
+        self.declare_parameter("initial_voxel_size", 0)
+        self.declare_parameter("max_distance", 100.0)
+        self.declare_parameter("display_axis_scale", 10.0)
+        self.display_axis_scale = (
+            self.get_parameter("display_axis_scale").get_parameter_value().double_value
+        )
+        self.max_distance = (
+            self.get_parameter("max_distance").get_parameter_value().double_value
+        )
+        self.initial_voxel_size = (
+            self.get_parameter("initial_voxel_size").get_parameter_value().double_value
+        )
         self.distance_threshold = (
             self.get_parameter("distance_threshold").get_parameter_value().double_value
         )
@@ -108,16 +119,14 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         self.o3d_pcd = o3d.geometry.PointCloud(
             o3d.utility.Vector3dVector(pcd_as_numpy_array)
         )
-        pcd = self.o3d_pcd  # .voxel_down_sample(voxel_size=2)
+        if self.initial_voxel_size > 0:
+            pcd = self.o3d_pcd.voxel_down_sample(voxel_size=self.initial_voxel_size)
+        else:
+            pcd = self.o3d_pcd
 
-        # # normal removal method
-        # outlier_cloud.estimate_normals()
-        # normals = np.array(outlier_cloud.normals)
-        # normals_avgs = np.average(normals, axis=0)
-        # coords = np.where(normals[:, 2] < normals_avgs[2])
-        # points = np.array(outlier_cloud.points)
-        # outlier_cloud.points = o3d.utility.Vector3dVector(points[coords])
-        # print(outlier_cloud)
+        points = np.array(pcd.points)
+        indices = np.where(points[:, 2] < self.max_distance)[0]
+        pcd = pcd.select_by_index(indices)
         pcd.paint_uniform_color([0, 0, 0])
         # find plane
         plane_model, inliers = pcd.segment_plane(
@@ -140,8 +149,6 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         # points = points[coords]
         # outlier_cloud.points = o3d.utility.Vector3dVector(points)
 
-        # outlier_cloud, ind = outlier_cloud.remove_radius_outlier(nb_points=5, radius=5)
-
         ground_pcd = pcd.select_by_index(inliers)
         obstacle_pcd = pcd.select_by_index(inliers, invert=True)
 
@@ -160,7 +167,7 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         self.obstacle_points_publisher.publish(obstacle_pc2)
         if self.should_show:
             self.non_blocking_pcd_visualization(
-                pcd, should_show_axis=True, axis_size=10
+                pcd, should_show_axis=True, axis_size=self.display_axis_scale
             )
 
     def non_blocking_pcd_visualization(
