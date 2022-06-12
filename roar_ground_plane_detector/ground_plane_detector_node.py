@@ -33,6 +33,7 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         self.declare_parameter("distance_threshold", 0.1)
         self.declare_parameter("ransac_n", 3)
         self.declare_parameter("num_iterations", 1000)
+        self.declare_parameter("obstacle_max_height", 1)
         self.lidar_topic = (
             self.get_parameter("lidar_topic").get_parameter_value().string_value
         )
@@ -51,6 +52,9 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
             PointCloud2, f"{self.lidar_topic}/obstacle_points", 10
         )
 
+        self.obstacle_max_height = (
+            self.get_parameter("obstacle_max_height").get_parameter_value().double_value
+        )
         self.distance_threshold = (
             self.get_parameter("distance_threshold").get_parameter_value().double_value
         )
@@ -63,6 +67,8 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
         self.get_logger().info(f"distance_threshold: {self.distance_threshold}")
         self.get_logger().info(f"ransac_n: {self.ransac_n}")
         self.get_logger().info(f"num_iterations: {self.num_iterations}")
+        self.get_logger().info(f"obstacle_max_height: {self.obstacle_max_height}")
+
         self.get_logger().info(
             f"Publishing Ground Points at {self.ground_points_publisher.topic}"
         )
@@ -84,7 +90,14 @@ class GroundPlaneDetectorNode(rclpy.node.Node):
 
         ground_pcd = o3d_pcd.select_by_index(inliers)
         obstacle_pcd = o3d_pcd.select_by_index(inliers, invert=True)
+        obstacle_points = np.asarray(obstacle_pcd.points)
 
+        obstacle_points = obstacle_points[
+            obstacle_points[:, 2] < self.obstacle_max_height
+        ]
+        obstacle_pcd: o3d.geometry.PointCloud = o3d.geometry.PointCloud(
+            o3d.utility.Vector3dVector(obstacle_points)
+        )
         ground_pc2 = array_to_xyz_pointcloud2f(
             np.array(ground_pcd.points, dtype=np.float32),
             frame_id=lidar_msg.header.frame_id,

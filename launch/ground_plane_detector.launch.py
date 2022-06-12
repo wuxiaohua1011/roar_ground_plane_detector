@@ -6,10 +6,6 @@ import launch
 
 
 def generate_launch_description():
-    base_path = os.path.realpath(
-        get_package_share_directory("roar_ground_plane_detector")
-    )
-
     return LaunchDescription(
         [
             launch.actions.DeclareLaunchArgument(
@@ -17,6 +13,9 @@ def generate_launch_description():
             ),
             launch.actions.DeclareLaunchArgument(
                 name="distance_threshold", default_value="0.1"
+            ),
+            launch.actions.DeclareLaunchArgument(
+                name="obstacle_max_height", default_value="1.0"
             ),
             launch.actions.DeclareLaunchArgument(name="ransac_n", default_value="3"),
             launch.actions.DeclareLaunchArgument(
@@ -32,6 +31,11 @@ def generate_launch_description():
                     {
                         "lidar_topic": launch.substitutions.LaunchConfiguration(
                             "lidar_topic"
+                        )
+                    },
+                    {
+                        "obstacle_max_height": launch.substitutions.LaunchConfiguration(
+                            "obstacle_max_height"
                         )
                     },
                     {"ransac_n": launch.substitutions.LaunchConfiguration("ransac_n")},
