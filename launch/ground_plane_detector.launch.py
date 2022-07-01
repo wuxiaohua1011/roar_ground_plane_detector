@@ -17,6 +17,9 @@ def generate_launch_description():
             launch.actions.DeclareLaunchArgument(
                 name="obstacle_max_height", default_value="1.0"
             ),
+            launch.actions.DeclareLaunchArgument(
+                name="obstacle_min_height", default_value="0.0"
+            ),
             launch.actions.DeclareLaunchArgument(name="ransac_n", default_value="3"),
             launch.actions.DeclareLaunchArgument(
                 name="num_iterations", default_value="100"
@@ -36,6 +39,11 @@ def generate_launch_description():
                     {
                         "obstacle_max_height": launch.substitutions.LaunchConfiguration(
                             "obstacle_max_height"
+                        )
+                    },
+                    {
+                        "obstacle_min_height": launch.substitutions.LaunchConfiguration(
+                            "obstacle_min_height"
                         )
                     },
                     {"ransac_n": launch.substitutions.LaunchConfiguration("ransac_n")},
